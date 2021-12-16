@@ -18,15 +18,20 @@ def replace_key(dictionary, oldKey, *args):
             #Delete old key value pair
             del(dictionary[oldKey])
 
-        return dictionary
+        return sort_dict_alphabetically(dictionary)
 
+#Sort dictionary alphabetically by keys
+def sort_dict_alphabetically(dictionary):
+    return {key: dictionary[key] for key in sorted(dictionary)}
+    
 #Replace data with whatever the json is called
 for hit in data["hits"]["hits"]:
+
     source = OrderedDict(hit["_source"])
 
-    for key in list(source):
+    for key in list(hit["_source"]):
         if key == '@admin':
-            hit["_source"] = replace_key(source, key)
+            source = replace_key(source, key)
 
         if key == 'classification':
             source[key] = [replace_key(record, '@admin') for record in source[key]]
@@ -38,3 +43,5 @@ for hit in data["hits"]["hits"]:
             if 'maker' in source[key].keys():
                 source[key]['maker'] = [replace_key(record, '@admin') for record in source[key]['maker']]
                 source[key]['maker'] = [replace_key(record, '@link', 'role') for record in source[key]['maker']]
+    
+    hit["_source"] = source
