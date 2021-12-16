@@ -1,46 +1,40 @@
-import json 
-
-with open('res.json') as json_file:
-    data = json.load(json_file)
-
-def prepend(lst):
-    '''
-    Rebuild dictionary and prepend ID as first element
-    '''
-    new_list = []
-    print('list', lst)
-
-    for dictionary in lst:
-        print('dict', dictionary)
-
-        #Create a new dictionary entry at the end of the dictionary 
-        dictionary.update({'id': dictionary['@admin']['id']})
-
-        # Remove old entry
-        dictionary.pop('@admin')
-
-        #Get all dictionary keys in order 
-        keys = list(dictionary.keys())
-
-        #Remove the recently created 'id' field and place it at the front of the list
-        keys.insert(0, keys.pop(keys.index('id')))
-
-        #Rebuild the dictionary according to old key order 
-        new = [{key: dictionary[key]} for key in keys]
-        new_list.append(new)
-    return new_list
-
-   
-
-for hit in data["hits"]["hits"]:
-        source = hit["_source"]
-        if "maker" in source.get("creation"):
-            source['creation']['maker'] = prepend(source.get("creation").get("maker"))
-        if 'classification' in source:
-            source['classification'] = prepend(source.get('classification'))
-
-
-with open('data.json', 'w') as outfile:
-    json.dump(data, outfile, indent=2)
-
+#Function
+def replace_key(dictionary, oldKey, *args):
+    ```
+    Takes dictionary to change keys in, including optional keys if defaults are not desired
+    ```
         
+        #Unpack the optional arg
+        newKey = args
+        if args:
+            newKey = list(args)[0]
+
+        #Check if the new or old key are in the dictionary
+        if (oldKey or newKey) in dictionary.keys():
+            
+            #Create the new key value pair
+            dictionary[ newKey  or 'id'] = dictionary[oldKey][newKey or 'id']
+            
+            #Delete old key value pair
+            del(dictionary[oldKey])
+
+        return dictionary
+
+#Replace data with whatever the json is called
+for hit in data["hits"]["hits"]:
+    source = OrderedDict(hit["_source"])
+
+    for key in list(source):
+        if key == '@admin':
+            hit["_source"] = replace_key(source, key)
+
+        if key == 'classification':
+            source[key] = [replace_key(record, '@admin') for record in source[key]]
+
+        if key == 'department':
+            source[key] = [replace_key(record, '@admin') for record in source[key]]
+
+        if key == 'creation':
+            if 'maker' in source[key].keys():
+                source[key]['maker'] = [replace_key(record, '@admin') for record in source[key]['maker']]
+                source[key]['maker'] = [replace_key(record, '@link', 'role') for record in source[key]['maker']]
